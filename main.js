@@ -16,19 +16,19 @@ bot.on('message', async (msg) => {
     const text = msg.text;
 
     if(text === '/start') {
-        await bot.sendMessage(chatId, 'Ниже появится кнопка, заполни форму', {
+        await bot.sendMessage(chatId, "Pastdagi tugma orqali malumotlaringizni kiriting", {
             reply_markup: {
                 resize_keyboard: true,
                 keyboard: [
-                    [{text: 'Заполнить форму', web_app: {url: webAppUrl + '/form'}}]
+                    [{text: "Malumotlarni to'ldirish", web_app: {url: webAppUrl + '/form'}}]
                 ]
             }
         })
 
-        await bot.sendMessage(chatId, 'Заходи в наш интернет магазин по кнопке ниже', {
+        await bot.sendMessage(chatId, "Quyidagi tugma yordamida onlayn do'konimizga tashrif buyuring", {
             reply_markup: {
                 inline_keyboard: [
-                    [{text: 'Сделать заказ', web_app: {url: webAppUrl}}]
+                    [{text: 'Zakaz berish', web_app: {url: webAppUrl}}]
                 ]
             }
         })
@@ -38,12 +38,12 @@ bot.on('message', async (msg) => {
         try {
             const data = JSON.parse(msg?.web_app_data?.data)
             console.log(data)
-            await bot.sendMessage(chatId, 'Спасибо за обратную связь!')
-            await bot.sendMessage(chatId, 'Ваша страна: ' + data?.country);
-            await bot.sendMessage(chatId, 'Ваша улица: ' + data?.street);
+            await bot.sendMessage(chatId, 'Malumotlarni kiritganingiz uchun tashakkur!')
+            await bot.sendMessage(chatId, 'Sizning mamlakatingiz: ' + data?.country);
+            await bot.sendMessage(chatId, 'Sizning ko\'changiz: ' + data?.street);
 
             setTimeout(async () => {
-                await bot.sendMessage(chatId, 'Всю информацию вы получите в этом чате');
+                await bot.sendMessage(chatId, 'Siz ushbu chatda barcha ma\'lumotlarni olasiz');
             }, 3000)
         } catch (e) {
             console.log(e);
@@ -57,9 +57,9 @@ app.post('/web-data', async (req, res) => {
         await bot.answerWebAppQuery(queryId, {
             type: 'article',
             id: queryId,
-            title: 'Успешная покупка',
+            title: 'Muvaffaqiyatli xarid',
             input_message_content: {
-                message_text: ` Поздравляю с покупкой, вы приобрели товар на сумму ${totalPrice}, ${products.map(item => item.title).join(', ')}`
+                message_text: ` Xaridingiz bilan tabriklaymiz, siz qimmatbaho buyum sotib oldingiz ${totalPrice}, ${products.map(item => item.title).join(', ')}`
             }
         })
         return res.status(200).json({});

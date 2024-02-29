@@ -1,89 +1,73 @@
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
-const { isEqual } = require("lodash");
+const express = require('express');
+const cors = require('cors');
 
 const token = '6489880884:AAFG3RJMURH8EkMr4KAYGPtjaK6Csbgtwuw';
-const bot = new TelegramBot(token, { polling: true });
-let contact = null;
-let location = null;
+const webAppUrl = 'https://restoran-telegram-web-app.netlify.app/';
 
-const commands = [
-    {
-        command: "/start",
-        description: "Botni ishga tushirish"
-    },
-    {
-        command: "/getme",
-        description: "Men haqimda"
-    },
-    {
-        command: "/menu",
-        description: "Menu"
-    }
-];
-bot.setMyCommands(commands);
+const bot = new TelegramBot(token, {polling: true});
+const app = express();
 
-bot.on('message', (msg) => {
+app.use(express.json());
+app.use(cors());
+
+bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    const messageText = msg.text;
+    const text = msg.text;
 
-    if (isEqual(messageText, '/start')) {
-        bot.sendMessage(chatId, 'Assalomu aleykum xush kelibsiz', {
+    if(text === '/start') {
+        await bot.sendMessage(chatId, 'Ниже появится кнопка, заполни форму', {
             reply_markup: {
+                resize_keyboard: true,
                 keyboard: [
-                    [{text: 'Kotakt yuborish', request_contact: true}],
-                    [{text: 'Lokatsiya yuborish', request_location: true}],
-                    [{text: 'Men haqimda'}],
-                    [{text: 'Bot menyusi'}],
-                ],
-                resize_keyboard: true
+                    [{text: 'Заполнить форму', web_app: {url: webAppUrl + '/form'}}]
+                ]
             }
-        });
-    } else if (isEqual(messageText, '/getme') || isEqual(messageText, 'Men haqimda')) {
-        bot.sendMessage(chatId,
-            `
-        Ismingiz: ${msg.from.first_name}
-        Familiyangiz: ${msg.from.last_name}
-        User nameingiz: ${msg.from.username}
-        Telefon Raqamingiz: ${contact.phone_number}
-    `);
+        })
 
-    } else if (isEqual(messageText, '/menu') || isEqual(messageText, "Bot menyusi")) {
-        bot.sendMessage(chatId, 'Bot menyusi', {
+        await bot.sendMessage(chatId, 'Заходи в наш интернет магазин по кнопке ниже', {
             reply_markup: {
-                keyboard: [
-                    ['Men haqimda'],
-                ],
-                resize_keyboard: true
+                inline_keyboard: [
+                    [{text: 'Сделать заказ', web_app: {url: webAppUrl}}]
+                ]
             }
-        });
+        })
+    }
+
+    if(msg?.web_app_data?.data) {
+        try {
+            const data = JSON.parse(msg?.web_app_data?.data)
+            console.log(data)
+            await bot.sendMessage(chatId, 'Спасибо за обратную связь!')
+            await bot.sendMessage(chatId, 'Ваша страна: ' + data?.country);
+            await bot.sendMessage(chatId, 'Ваша улица: ' + data?.street);
+
+            setTimeout(async () => {
+                await bot.sendMessage(chatId, 'Всю информацию вы получите в этом чате');
+            }, 3000)
+        } catch (e) {
+            console.log(e);
+        }
     }
 });
 
-bot.on('photo', img => {
-    const chatId = img.chat.id;
+app.post('/web-data', async (req, res) => {
+    const {queryId, products = [], totalPrice} = req.body;
     try {
-        bot.downloadFile(img.photo[img.photo.length - 1].file_id, './images');
-        bot.sendPhoto(chatId, './images/file_0.jpg')
-        console.log("Image successfully downloaded");
-    } catch (error) {
-        console.log(error);
-    }
-});
-
-bot.on('contact', res => {
-    try {
-        contact = res.contact;
-    }
-    catch (error) {
-        console.log(error)
+        await bot.answerWebAppQuery(queryId, {
+            type: 'article',
+            id: queryId,
+            title: 'Успешная покупка',
+            input_message_content: {
+                message_text: ` Поздравляю с покупкой, вы приобрели товар на сумму ${totalPrice}, ${products.map(item => item.title).join(', ')}`
+            }
+        })
+        return res.status(200).json({});
+    } catch (e) {
+        return res.status(500).json({})
     }
 })
 
-bot.on('location', res => {
-    bot.sendLocation(res.chat.id, res.location.latitude ,res.location.longitude)
-    bot.sendMessage(res.chat.id,`
-    Uzunlik: ${res.location.longitude}
-    Kenglik: ${res.location.latitude}
-    `)
-})
+const PORT = 8000;
+
+app.listen(PORT, () => console.log('server started on PORT ' + PORT))
